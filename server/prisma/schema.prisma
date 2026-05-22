@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(50)
+  password  String   @db.VarChar(255)
+  nickname  String   @default("") @db.VarChar(50)
+  userType  Int      @default(1)  // 1=普通用户, 2=管理员
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions ChatSession[]
+  diaries  EmotionDiary[]
+
+  @@map("users")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  parentId  Int      @default(0)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  articles Article[]
+
+  @@map("categories")
+}
+
+model Article {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(200)
+  content    String   @db.LongText
+  summary    String   @default("") @db.VarChar(500)
+  cover      String   @default("") @db.VarChar(500)
+  categoryId Int
+  status     Int      @default(0) // 0=草稿, 1=已发布, 2=已下线
+  tags       String   @default("") @db.VarChar(500)
+  viewCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@map("articles")
+}
+
+model ChatSession {
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  sessionTitle       String   @db.VarChar(200)
+  status             String   @default("ACTIVE") @db.VarChar(20)
+  startedAt          DateTime @default(now())
+  lastMessageContent String   @default("") @db.VarChar(500)
+  messageCount       Int      @default(0)
+  durationMinutes    Int      @default(0)
+
+  user     User          @relation(fields: [userId], references: [id])
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id         Int      @id @default(autoincrement())
+  sessionId  Int
+  senderType String   @db.VarChar(10) // USER, AI
+  content    String   @db.LongText
+  createdAt  DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model EmotionDiary {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  moodScore         Int
+  dominantEmotion   String   @db.VarChar(50)
+  emotionTriggers   String   @db.Text
+  diaryContent      String   @db.Text
+  sleepQuality      Int      @default(3)
+  stressLevel       Int      @default(3)
+  diaryDate         String   @db.VarChar(20)
+  aiEmotionAnalysis String?  @db.Text // JSON
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("emotion_diaries")
+}
+
+model File {
+  id           Int      @id @default(autoincrement())
+  filename     String   @db.VarChar(255)
+  url          String   @db.VarChar(500)
+  businessType String   @db.VarChar(50)
+  businessId   String   @db.VarChar(50)
+  size         Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@map("files")
+}
